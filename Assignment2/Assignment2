@@ -1,0 +1,98 @@
+kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.0.129 --ignore-preflight-errors=all
+
+mkdir $HOME/.k8s
+
+cp /etc/kubernetes/admin.conf $HOME/.k8s/
+
+chown $(id -u):$(id -g) $HOME/.k8s/admin.conf
+
+export KUBECONFIG=$HOME/.k8s/admin.conf
+
+echo "export KUBECONFIG=$HOME/.k8s/admin.conf" | tee -a ~/.bashrc
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml
+
+kubectl taint nodes --all node-role.kubernetes.io/master-
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended/kubernetes-dashboard.yaml
+
+[node1 ~]$ kubectl get nodes
+NAME    STATUS   ROLES    AGE     VERSION
+node1   Ready    master   3m20s   v1.14.9
+
+[node1 ~]$ kubectl get pods
+NAME                              READY   STATUS             RESTARTS   AGE
+hellp-world-app-f76cb74c8-pqct9   0/1     CrashLoopBackOff   1          11s
+
+[node1 ~]$ kubectl describe pods hellp-world-app-f76cb74c8-pqct9
+Name:               hellp-world-app-f76cb74c8-pqct9
+Namespace:          default
+Priority:           0
+PriorityClassName:  <none>
+Node:               node1/192.168.0.38
+Start Time:         Tue, 21 Apr 2020 13:13:55 +0000
+Labels:             pod-template-hash=f76cb74c8
+                    run=hellp-world-app
+Annotations:        <none>
+Status:             Running
+IP:                 10.244.0.5
+Controlled By:      ReplicaSet/hellp-world-app-f76cb74c8
+Containers:
+  hellp-world-app:
+    Container ID:   docker://e6406c67da955b795bba95ba38d3fa6532fe70bf2e7b9a5d5b9a7bcc70bf99dd
+    Image:          hello-world:latest
+    Image ID:       docker-pullable://hello-world@sha256:8e3114318a995a1ee497790535e7b88365222a21771ae7e53687ad76563e8e76
+    Port:           <none>
+    Host Port:      <none>
+    State:          Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Tue, 21 Apr 2020 13:20:00 +0000
+      Finished:     Tue, 21 Apr 2020 13:20:00 +0000
+    Last State:     Terminated
+      Reason:       Completed
+      Exit Code:    0
+      Started:      Tue, 21 Apr 2020 13:17:11 +0000
+      Finished:     Tue, 21 Apr 2020 13:17:11 +0000
+    Ready:          False
+    Restart Count:  6
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-llw7w (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+  PodScheduled      True
+Volumes:
+  default-token-llw7w:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-llw7w
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type     Reason     Age                   From               Message
+  ----     ------     ----                  ----               -------
+  Normal   Scheduled  6m9s                  default-scheduler  Successfully assigned default/hellp-world-app-f76cb74c8-pqct9 to node1
+  Normal   Pulled     5m21s (x4 over 6m6s)  kubelet, node1     Successfully pulled image "hello-world:latest"
+  Normal   Created    5m21s (x4 over 6m6s)  kubelet, node1     Created container hellp-world-app
+  Normal   Started    5m21s (x4 over 6m6s)  kubelet, node1     Started container hellp-world-app
+  Normal   Pulling    4m27s (x5 over 6m8s)  kubelet, node1     Pulling image "hello-world:latest"
+  Warning  BackOff    62s (x25 over 6m3s)   kubelet, node1     Back-off restarting failed container
+
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta1/aio/deploy/recommended.yaml
+
+kubectl proxy
+
+http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+
+
+ctrl+insrt
