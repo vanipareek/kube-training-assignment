@@ -1,0 +1,8 @@
+#To Create the image, run the command from the folder where Dockerfile resides
+docker build -t server_app .
+
+#To run the container
+docker run -itd --name serverapp -v  D:\Training-Assignments\serverdata:/serverdata --net k8s-training server_app
+
+#Remove the container and image
+docker rm -f serverapp && docker rmi server_app
