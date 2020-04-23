@@ -16,12 +16,15 @@ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documen
 
 kubectl taint nodes --all node-role.kubernetes.io/master-
 
+
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended/kubernetes-dashboard.yaml
 
 [node1 ~]$ kubectl get nodes
 NAME    STATUS   ROLES    AGE     VERSION
 node1   Ready    master   3m20s   v1.14.9
+
+[node1 ~]$ kubectl create deployment hello-world --image=hello-world:latest
+deployment.apps/hello-world created
 
 [node1 ~]$ kubectl get pods
 NAME                              READY   STATUS             RESTARTS   AGE

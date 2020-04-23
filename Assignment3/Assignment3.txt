@@ -1,0 +1,52 @@
+[node1 ~]$ kubectl create namespace trial1
+namespace/trial1 created
+[node1 ~]$ kubectl create namespace trial2
+namespace/trial2 created
+
+kubectl config view
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: DATA+OMITTED
+    server: https://192.168.0.38:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+current-context: kubernetes-admin@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: REDACTED
+    client-key-data: REDACTED
+
+[node1 ~]$ kubectl config set-context trial1 --namespace=trial1 --cluster=kubernetes
+Context "trial1" created.
+[node1 ~]$ kubectl config set-context trial2 --namespace=trial2 --cluster=kubernetes
+Context "trial2" created.
+
+	
+[node1 yamls]$ kubectl config use-context trial1
+[node1 yamls]$ kubectl apply -f run-my-nginx.yaml
+
+[node1 yamls]$ kubectl get pods -l run=my-nginx -o wide
+NAME                        READY   STATUS    RESTARTS   AGE     IP           NODE    NOMINATED NODE   READINESS GATES
+my-nginx-86459cfc9f-cqgxk   1/1     Running   0          4m12s   10.244.0.10   node1   <none>           <none>
+my-nginx-86459cfc9f-t97p4   1/1     Running   0          4m12s   10.244.0.11  node1   <none>           <none>
+check pod ip
+[node1 yamls]$ kubectl get pods -l run=my-nginx -o yaml | grep podIP
+    podIP: 10.244.0.10
+    podIP: 10.244.0.11
+
+[node1 ~]$ kubectl get namespaces --show-labels
+NAME              STATUS   AGE    LABELS
+default           Active   129m   <none>
+kube-node-lease   Active   129m   <none>
+kube-public       Active   129m   <none>
+kube-system       Active   129m   <none>
+trial1            Active   27m    <none>
+trial2            Active   27m    <none>
