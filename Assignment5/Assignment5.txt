@@ -1,0 +1,153 @@
+[node1 ~]$ kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.0.13 --ignore-preflight-errors=all
+
+[node1 ~]$ mkdir $HOME/.k8s
+
+[node1 ~]$ cp /etc/kubernetes/admin.conf $HOME/.k8s/
+
+[node1 ~]$ chown $(id -u):$(id -g) $HOME/.k8s/admin.conf
+
+[node1 ~]$ export KUBECONFIG=$HOME/.k8s/admin.conf
+
+[node1 ~]$ echo "export KUBECONFIG=$HOME/.k8s/admin.conf" | tee -a ~/.bashrc
+
+[node1 ~]$ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+[node1 ~]$ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml
+
+[node1 ~]$ kubectl taint nodes --all node-role.kubernetes.io/master-
+
+[node1 ~]$ kubectl get nodes
+NAME    STATUS   ROLES    AGE     VERSION
+node1   Ready    master   3m20s   v1.14.9
+
+//create a dir for persistent volume
+[node1 ~]$ mkdir /kube
+[node1 ~]$ chmod 777 /kube
+
+[node1 ~]$ mkdir yamls
+[node1 ~]$ cd yamls
+
+
+//create yamls for pv pvc and pod
+[node1 yamls]$ touch pv.yaml
+[node1 yamls]$ vi pv.yaml
+
+[node1 yamls]$ touch pvc.yaml
+[node1 yamls]$ vi pvc.yaml
+
+[node1 yamls]$ touch pod.yaml
+[node1 yamls]$ vi pod.yaml
+
+[node1 yamls]$ ls
+pod.yaml pv.yaml pvc.yaml
+
+
+[node1 yamls]$ kubectl create -f pv.yaml
+persistentvolume/pv-hostpath created
+[node1 yamls]$ kubectl get pv
+NAME          CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+pv-hostpath   1Gi        RWO            Retain           Available           manual                  33s
+
+[node1 yamls]$ kubectl create -f pvc.yaml
+persistentvolumeclaim/pvc-hostpath created
+[node1 yamls]$ kubectl get pvc
+NAME           STATUS   VOLUME        CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+pvc-hostpath   Bound    pv-hostpath   1Gi        RWO            manual         6s
+
+[node1 yamls]$ kubectl get pv
+NAME          CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                  STORAGECLASSREASON   AGE
+pv-hostpath   1Gi        RWO            Retain           Bound    default/pvc-hostpath   manual				  60m
+
+
+[node1 yamls]$ kubectl create -f pod.yaml
+
+[node1 yamls]$ kubectl get all -o wide
+NAME          READY   STATUS    RESTARTS   AGE    IP           NODE    NOMINATED NODE   READINESS GATES
+pod/busybox   1/1     Running   0          119s   10.244.0.4   node1   <none>           <none>
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE   SELECTOR
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   96m   <none>
+
+[node1 yamls]$ kubectl describe pod busybox
+Name:               busybox
+Namespace:          default
+Priority:           0
+PriorityClassName:  <none>
+Node:               node1/192.168.0.13
+Start Time:         Mon, 27 Apr 2020 08:24:42 +0000
+Labels:             <none>
+Annotations:        <none>
+Status:             Running
+IP:                 10.244.0.4
+Containers:
+  busybox:
+    Container ID:  docker://c7d1905dd78eebbb178cf6036929738c2ad827ad6292e676a8ee08f60c334e52
+    Image:         busybox
+    Image ID:      docker-pullable://busybox@sha256:a8cf7ff6367c2afa2a90acd081b484cbded349a7076e7bdf37a05279f276bc12
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/sh
+    Args:
+      -c
+      sleep 500
+    State:          Running
+      Started:      Mon, 27 Apr 2020 08:24:46 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /mydata from host-volume (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-qvfpx (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+  PodScheduled      True
+Volumes:
+  host-volume:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  pvc-hostpath
+    ReadOnly:   false
+  default-token-qvfpx:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-qvfpx
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  3m59s  default-scheduler  Successfully assigned default/busybox to node1
+  Normal  Pulling    3m58s  kubelet, node1     Pulling image "busybox"
+  Normal  Pulled     3m55s  kubelet, node1     Successfully pulled image "busybox"
+  Normal  Created    3m55s  kubelet, node1     Created container busybox
+  Normal  Started    3m55s  kubelet, node1     Started container busybox
+  
+/////////////////create a file in busybox ounted volume
+[node1 yamls]$ kubectl exec busybox ls
+bin
+dev
+etc
+home
+mydata
+proc
+root
+sys
+tmp
+usr
+var
+[node1 yamls]$ kubectl exec busybox touch /mydata/hello
+
+[node1 yamls]$ kubectl exec busybox ls /mydata
+hello
+
+///////////////////the mounted persistemnt volume is /kube, check whether the file created there or not
+[node1 yamls]$ ls /kube
+hello
+
+// as the policy is retain even after deleting the pvc and pod the data file hello will still exist in persistent volume
+	

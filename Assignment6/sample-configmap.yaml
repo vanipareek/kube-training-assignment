@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: sample-configmap
+data:
+ demo_name: "configmap demo"
+ demo_owner: "vani"

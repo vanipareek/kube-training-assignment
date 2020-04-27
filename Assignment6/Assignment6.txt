@@ -1,0 +1,96 @@
+[node1 ~]$ kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.0.13 --ignore-preflight-errors=all
+
+[node1 ~]$ mkdir $HOME/.k8s
+
+[node1 ~]$ cp /etc/kubernetes/admin.conf $HOME/.k8s/
+
+[node1 ~]$ chown $(id -u):$(id -g) $HOME/.k8s/admin.conf
+
+[node1 ~]$ export KUBECONFIG=$HOME/.k8s/admin.conf
+
+[node1 ~]$ echo "export KUBECONFIG=$HOME/.k8s/admin.conf" | tee -a ~/.bashrc
+
+[node1 ~]$ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+[node1 ~]$ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml
+
+[node1 ~]$ kubectl taint nodes --all node-role.kubernetes.io/master-
+
+[node1 ~]$ kubectl get nodes
+
+// create yaml for configmap and pod and use the yaml to create configmap and pod
+
+[node1 yamls]$ kubectl create -f sample-configmap.yaml
+configmap/sample-configmap created
+[node1 yamls]$ kubectl get cm
+NAME               DATA   AGE
+sample-configmap   2      19s
+[node1 yamls]$ kubectl describe  cm
+Name:         sample-configmap
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+
+Data
+====
+demo_name:
+----
+configmap demo
+demo_owner:
+----
+vani
+Events:  <none>
+
+[node1 yamls]$ kubectl create -f pod.yaml
+pod/busybox created
+
+// get into running pod and check the key correspond to which value
+[node1 yamls]$ kubectl exec -it busybox sh
+/ # echo $DEMONAME
+configmap demo
+/ # echo $DEMOOWNER
+vani
+/ # env | grep -i demo
+DEMOOWNER=vani
+DEMONAME=configmap demo
+
+
+
+//////////////////////mount the configmap as volume
+
+[node1 yamls]$ kubectl create -f pod_configmap_as_volume.yaml
+pod/busybox2 created
+[node1 yamls]$ kubectl exec -it busybox2 sh
+/ # ls
+bin                       mounted_configmap_volume  tmp
+dev                       proc                      usr
+etc                       root                      var
+home                      sys
+/ # ls mounted_configmap_volume/
+demo_name   demo_owner
+/ #   cat mounted_configmap_volume/demo_name
+configmap demo
+/ #
+/ #
+/ #   cat mounted_configmap_volume/demo_owner
+vani
+/ #
+
+//Updating the config map
+[node1 yamls]$ kubectl edit cm sample-configmap
+update the demo_name and demo_owner values to " configmap demo after edit" and "vani pareek" respectivly
+
+[node1 yamls]$ kubectl exec -it busybox2 sh
+/ # ls
+bin                       mounted_configmap_volume  tmp
+dev                       proc                      usr
+etc                       root                      var
+home                      sys
+/ # ls mounted_configmap_volume/demo_name
+mounted_configmap_volume/demo_name
+/ # cat mounted_configmap_volume/demo_name
+configmap demo after edit
+/ #
+/ #
+/ # cat mounted_configmap_volume/demo_owner
+vani pareek

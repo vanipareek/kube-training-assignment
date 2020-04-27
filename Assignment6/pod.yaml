@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+ name: busybox
+spec:
+ containers:
+ - image: busybox
+   name: busybox
+   command: ["/bin/sh"]
+   args: ["-c", "sleep 500"]
+   env:
+   - name: DEMONAME
+     valueFrom:
+      configMapKeyRef:
+       name: sample-configmap
+       key: demo_name
+   - name: DEMOOWNER
+     valueFrom:
+      configMapKeyRef:
+       name: sample-configmap
+       key: demo_owner       
